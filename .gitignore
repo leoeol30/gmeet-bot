@@ -1,0 +1,7 @@
+# Project output directories
+recordings/
+screenshots/
+transcriptions/
+
+# IDE
+.DS_Store
