@@ -1,0 +1,293 @@
+import asyncio
+import os
+import subprocess
+import click
+import datetime
+import json
+from time import sleep
+import logging
+import websockets
+from websockets.exceptions import ConnectionClosedOK
+import undetected_chromedriver as uc
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+from selenium.common.exceptions import NoSuchElementException
+import requests
+import base64
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# Audio Configuration for Gladia
+SAMPLE_RATE = 16000
+STREAMING_CONFIGURATION = {
+    "encoding": "wav/pcm",
+    "sample_rate": SAMPLE_RATE,
+    "bit_depth": 16,
+    "channels": 1,
+    "language_config": {
+        "languages": ["en", "fr", "es", "ar"],
+        "code_switching": True
+    },
+    "realtime_processing": {
+        "custom_vocabulary": True,
+        "custom_vocabulary_config": {
+            "vocabulary": ["Gladia","Léo Idir"]  # Add any specific terms you want to recognize
+        }
+    }
+}
+
+def init_live_session(api_key: str):
+    """Initialize a live transcription session with Gladia"""
+    response = requests.post(
+        "https://api.gladia.io/v2/live",
+        headers={"X-Gladia-Key": api_key},
+        json=STREAMING_CONFIGURATION,
+        timeout=3
+    )
+    if not response.ok:
+        logger.error(f"Failed to initialize live session: {response.text}")
+        raise Exception("Failed to initialize live session")
+    return response.json()
+
+async def run_command_async(command):
+    """Run a shell command asynchronously"""
+    process = await asyncio.create_subprocess_shell(
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
+    return await process.communicate()
+
+async def google_sign_in(email, password, driver):
+    """Handle Google account sign-in process"""
+    try:
+        logger.info("Starting Google sign-in process")
+        driver.get("https://accounts.google.com")
+        await asyncio.sleep(1)
+
+        email_field = driver.find_element(By.NAME, "identifier")
+        email_field.send_keys(email)
+        await asyncio.sleep(2)
+
+        driver.find_element(By.ID, "identifierNext").click()
+        await asyncio.sleep(3)
+
+        password_field = driver.find_element(By.NAME, "Passwd")
+        password_field.click()
+        password_field.send_keys(password + Keys.RETURN)
+        await asyncio.sleep(5)
+        logger.info("Successfully signed in to Google")
+    except NoSuchElementException as e:
+        logger.error(f"Failed to sign in: {str(e)}")
+        raise
+
+async def setup_audio_drivers():
+    """Configure virtual audio drivers for recording"""
+    logger.info("Setting up virtual audio drivers")
+    commands = [
+        "sudo rm -rf /var/run/pulse /var/lib/pulse /root/.config/pulse",
+        "sudo pulseaudio -D --verbose --exit-idle-time=-1 --system --disallow-exit >> /dev/null 2>&1",
+        'sudo pactl load-module module-null-sink sink_name=DummyOutput sink_properties=device.description="Virtual_Dummy_Output"',
+        'sudo pactl load-module module-null-sink sink_name=MicOutput sink_properties=device.description="Virtual_Microphone_Output"',
+        "sudo pactl load-module module-virtual-source source_name=VirtualMic",
+        "sudo pactl set-default-sink MicOutput",
+        "sudo pactl set-default-source MicOutput.monitor"
+    ]
+    
+    for cmd in commands:
+        await run_command_async(cmd)
+
+async def handle_media_controls(driver):
+    """Handle microphone and camera controls"""
+    try:
+        driver.find_element(By.XPATH, "//span[contains(text(), 'Continue without microphone')]").click()
+        await asyncio.sleep(2)
+        driver.find_element(By.XPATH, "//div[@aria-label='Turn off microphone']").click()
+        logger.info("Microphone disabled")
+    except NoSuchElementException:
+        logger.info("No microphone to disable")
+
+    try:
+        driver.find_element(By.XPATH, "//div[@aria-label='Turn off camera']")
+        logger.info("Camera disabled")
+    except NoSuchElementException:
+        logger.info("No camera to disable")
+
+async def join_meeting(driver):
+    """Attempt to join the meeting"""
+    max_time = datetime.datetime.now() + datetime.timedelta(
+        minutes=int(os.getenv("MAX_WAITING_TIME_IN_MINUTES", 5))
+    )
+    
+    while datetime.datetime.now() < max_time:
+        try:
+            join_button = driver.find_element(By.XPATH, "//span[contains(text(), 'Ask to join')]")
+            join_button.click()
+            await asyncio.sleep(2)
+            logger.info("Meeting joined")
+            return True
+        except NoSuchElementException:
+            await asyncio.sleep(5)
+            logger.info("Waiting to join meeting...")
+    
+    logger.error("Failed to join meeting within the timeout period")
+    return False
+
+async def capture_and_stream_audio(websocket):
+    """Capture audio using ffmpeg and stream to Gladia"""
+    logger.info("Starting audio capture")
+    
+    # FFmpeg command to capture audio and output raw PCM
+    ffmpeg_command = (
+        f"ffmpeg -y -f pulse -i MicOutput.monitor "
+        f"-acodec pcm_s16le -ac 1 -ar {SAMPLE_RATE} "
+        f"-f s16le -"  # Output raw PCM to stdout
+    )
+
+    process = await asyncio.create_subprocess_shell(
+        ffmpeg_command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
+
+    chunk_size = 3200  # Same as original FRAMES_PER_BUFFER
+    try:
+        while True:
+            # Read chunk of raw audio data
+            audio_chunk = await process.stdout.read(chunk_size)
+            if not audio_chunk:
+                break
+
+            # Encode and send to Gladia
+            data = base64.b64encode(audio_chunk).decode("utf-8")
+            json_data = json.dumps({"type": "audio_chunk", "data": {"chunk": str(data)}})
+            await websocket.send(json_data)
+            await asyncio.sleep(0.1)  # Control streaming rate
+    except Exception as e:
+        logger.error(f"Error in audio capture: {str(e)}")
+    finally:
+        process.terminate()
+        try:
+            await process.wait()
+        except:
+            pass
+
+async def handle_transcription_messages(websocket):
+    """Process transcription messages from Gladia"""
+    try:
+        async for message in websocket:
+            content = json.loads(message)
+            
+            if content["type"] == "transcript" and content["data"]["is_final"]:
+                start_time = content["data"]["utterance"]["start"]
+                end_time = content["data"]["utterance"]["end"]
+                text = content["data"]["utterance"]["text"].strip()
+                logger.info(f"{start_time:.2f}s --> {end_time:.2f}s | {text}")
+                
+                # Save transcription to file
+                with open("recordings/live_transcript.txt", "a") as f:
+                    f.write(f"{start_time:.2f}s --> {end_time:.2f}s | {text}\n")
+            
+            elif content["type"] == "post_final_transcript":
+                logger.info("Transcription session ended")
+                with open("recordings/final_transcript.json", "w") as f:
+                    json.dump(content, f, indent=2)
+                break
+    except Exception as e:
+        logger.error(f"Error processing transcription: {str(e)}")
+
+async def join_meet():
+    """Main function to handle the Google Meet recording process"""
+    meet_link = os.getenv("GMEET_LINK", "https://meet.google.com/dau-pztc-yad")
+    logger.info(f"Starting recorder for {meet_link}")
+
+    # Create recordings directory if it doesn't exist
+    os.makedirs("recordings", exist_ok=True)
+
+    # Setup audio drivers
+    await setup_audio_drivers()
+
+    # Configure Chrome options
+    options = uc.ChromeOptions()
+    chrome_args = [
+        "--use-fake-ui-for-media-stream",
+        "--window-size=1920x1080",
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-gpu",
+        "--disable-extensions",
+        "--disable-application-cache",
+        "--disable-dev-shm-usage"
+    ]
+    for arg in chrome_args:
+        options.add_argument(arg)
+
+    # Initialize Chrome driver
+    driver = uc.Chrome(service_log_path="chromedriver.log", use_subprocess=False, options=options)
+    driver.set_window_size(1920, 1080)
+
+    # Get credentials
+    email = os.getenv("GMAIL_USER_EMAIL", "")
+    password = os.getenv("GMAIL_USER_PASSWORD", "")
+    gladia_api_key = os.getenv("GLADIA_API_KEY", "")
+
+    if not all([email, password, gladia_api_key]):
+        logger.error("Missing required credentials")
+        return
+
+    try:
+        # Sign in and join meet
+        await google_sign_in(email, password, driver)
+        driver.get(meet_link)
+
+        # Grant necessary permissions
+        driver.execute_cdp_cmd(
+            "Browser.grantPermissions",
+            {
+                "origin": meet_link,
+                "permissions": [
+                    "geolocation",
+                    "audioCapture",
+                    "displayCapture",
+                    "videoCapture",
+                    "videoCapturePanTiltZoom",
+                ]
+            }
+        )
+
+        # Handle initial setup and media controls
+        await handle_media_controls(driver)
+        if not await join_meeting(driver):
+            return
+
+        # Initialize live transcription session
+        session = init_live_session(gladia_api_key)
+        
+        # Start live transcription
+        async with websockets.connect(session["url"]) as websocket:
+            logger.info("Starting live transcription")
+            
+            # Create tasks for audio streaming and transcription handling
+            audio_task = asyncio.create_task(capture_and_stream_audio(websocket))
+            transcription_task = asyncio.create_task(handle_transcription_messages(websocket))
+            
+            # Wait for the specified duration
+            duration = int(os.getenv("DURATION_IN_MINUTES", 15)) * 60
+            await asyncio.sleep(duration)
+            
+            # Stop tasks
+            audio_task.cancel()
+            transcription_task.cancel()
+            
+            # Send stop signal to Gladia
+            await websocket.send(json.dumps({"type": "stop_recording"}))
+
+    except Exception as e:
+        logger.error(f"Error during meeting: {str(e)}")
+    finally:
+        driver.quit()
+
+if __name__ == "__main__":
+    click.echo("Starting Google Meet recorder with live transcription...")
+    asyncio.run(join_meet())
+    click.echo("Finished recording Google Meet.")
