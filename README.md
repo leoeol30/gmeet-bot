@@ -1,60 +1,76 @@
-# GMeet Bot
+# 🎥 Gladia Transcription - GMeet Bot
 
-Record and transcribe Google Meet meetings from a container using virtual sound card (PulseAudio) and screen recording (Xscreen). This project demonstrates recording sessions without a physical sound card using audio loop sink while avoiding detection by the meeting provider (Google Meet).
+<div align="center">
 
-One of the main challenges addressed is capturing audio without triggering meeting provider security measures. The solution uses virtual devices and audio loop sink.
+*A technical implementation demonstrating Gladia's real-time and prerecorded transcription APIs with Google Meet*
 
-This project is a proof of concept with limited support and is not meant for production grade usage.
+Created by [Léo Idir](https://github.com/leoidir)
 
-## Build
+</div>
 
-### Live Transcription Mode
+A demonstration showing how to use both Gladia's real-time and prerecorded transcription APIs with Google Meet. The project supports two modes:
+- Real-time transcription with live output during the meeting
+- Prerecorded transcription with speaker diarization after the meeting
+
+> ⚠️ **Note**: This is a technical demonstration and not intended for production use.
+
+## 🔑 Key Technical Aspects
+- Dual transcription modes (real-time and prerecorded)
+- Integration with Gladia's V2 APIs
+- Virtual audio capture for Google Meet
+- Automated session management
+
+## 🚀 Build Options
+
 ```bash
+# Real-time Transcription Mode
 docker build -t gmeet-live -f Dockerfile.live .
-```
 
-### Pre-recorded Mode
-```bash
+# Prerecorded Transcription Mode
 docker build -t gmeet-prerecorded -f Dockerfile.prerecorded .
 ```
 
-## Usage
+## 💻 Implementation Examples
 
-### Live Transcription
+### Real-time Transcription Mode
 ```bash
 docker run -it \
-    -e GMEET_LINK=https://meet.google.com/my-gmeet-id \
-    -e GMAIL_USER_EMAIL=myuser1234@gmail.com \
-    -e GMAIL_USER_PASSWORD=my_gmail_password \
-    -e DURATION_IN_MINUTES=1 \ #duration of the meeting to record
-    -e GLADIA_API_KEY=YOUR_GLADIA_API_KEY \
-    -e MAX_WAIT_TIME_IN_MINUTES=2 \ #max wait time in the lobby
-    -v $PWD/recordings:/app/recordings \ # local storage for the recording
-    -v $PWD/screenshots:/app/screenshots \ # local storage for intermediate bot screenshots
-    -v $PWD/transcriptions:/app/transcriptions \ # local storage for transcriptions
+    -e GMEET_LINK="https://meet.google.com/my-gmeet-id" \
+    -e GMAIL_USER_EMAIL="myuser1234@gmail.com" \
+    -e GMAIL_USER_PASSWORD="my_gmail_password" \
+    -e DURATION_IN_MINUTES=1 \
+    -e GLADIA_API_KEY="YOUR_GLADIA_API_KEY" \
+    -e MAX_WAIT_TIME_IN_MINUTES=2 \
+    -v $PWD/recordings:/app/recordings \
+    -v $PWD/screenshots:/app/screenshots \
+    -v $PWD/transcriptions:/app/transcriptions \
     gmeet-live
 ```
 
-### Pre-recorded Mode with Diarization
+### Prerecorded Transcription Mode
 ```bash
 docker run -it \
-    -e GMEET_LINK=https://meet.google.com/my-gmeet-id \
-    -e GMAIL_USER_EMAIL=myuser1234@gmail.com \
-    -e GMAIL_USER_PASSWORD=my_gmail_password \
-    -e DURATION_IN_MINUTES=1 \ #duration of the meeting to record
-    -e GLADIA_API_KEY=YOUR_GLADIA_API_KEY \
+    -e GMEET_LINK="https://meet.google.com/my-gmeet-id" \
+    -e GMAIL_USER_EMAIL="myuser1234@gmail.com" \
+    -e GMAIL_USER_PASSWORD="my_gmail_password" \
+    -e DURATION_IN_MINUTES=1 \
+    -e GLADIA_API_KEY="YOUR_GLADIA_API_KEY" \
     -e GLADIA_DIARIZATION=true \
-    -e MAX_WAIT_TIME_IN_MINUTES=2 \ #max wait time in the lobby
-    -v $PWD/recordings:/app/recordings \ # local storage for the recording
-    -v $PWD/screenshots:/app/screenshots \ # local storage for intermediate bot screenshots
-    -v $PWD/transcriptions:/app/transcriptions \ # local storage for transcription
+    -e MAX_WAIT_TIME_IN_MINUTES=2 \
+    -v $PWD/recordings:/app/recordings \
+    -v $PWD/screenshots:/app/screenshots \
+    -v $PWD/transcriptions:/app/transcriptions \
     gmeet-prerecorded
 ```
 
-## Features
-- Live transcription with real-time output
-- Pre-recorded mode with diarization support
+## 🌟 Features
+- Dual transcription modes (real-time and prerecorded)
+- Speaker diarization in prerecorded mode
 - Multi-language support (English, French, Spanish, Arabic)
 - Virtual audio recording using PulseAudio
 - Screen capture using Xscreen
 - Automated meeting attendance
+
+---
+
+Created to demonstrate both real-time and prerecorded transcription capabilities of [Gladia](https://gladia.io)'s APIs.
