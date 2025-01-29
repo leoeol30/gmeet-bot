@@ -4,7 +4,6 @@
 
 *A technical implementation demonstrating Gladia's real-time and prerecorded transcription APIs with Google Meet*
 
-Created by [Léo Idir](https://github.com/leoeol30)
 
 </div>
 
