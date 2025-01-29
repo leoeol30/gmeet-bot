@@ -1,7 +1,7 @@
 # Use a base image, for example, Ubuntu
 FROM ultrafunk/undetected-chromedriver
 
-RUN mkdir /app /app/recordings /app/screenshots
+RUN mkdir /app /app/recordings /app/screenshots /app/transcriptions
 
 
 # Set the working directory inside the container
@@ -106,6 +106,6 @@ RUN rm /run/dbus/pid
 RUN mv pulseaudio.conf /etc/dbus-1/system.d/pulseaudio.conf
 
 # Define the command to run your application
-CMD ["/app/entrypoint.sh"]
+CMD ["/app/entrypoint-prerecorded.sh"]
 
 

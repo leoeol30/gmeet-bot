@@ -168,8 +168,8 @@ async def handle_media_controls(driver):
     """Handle microphone and camera controls"""
     try:
         # Disable microphone
-        driver.find_element(By.XPATH, "//span[contains(text(), 'Continue without microphone')]").click()
-        await asyncio.sleep(2)
+        #driver.find_element(By.XPATH, "//span[contains(text(), 'Continue without microphone')]").click()
+        #await asyncio.sleep(2)
         driver.find_element(By.XPATH, "//div[@aria-label='Turn off microphone']").click()
         driver.save_screenshot("screenshots/disable_microphone.png")
         logger.info("Microphone disabled")
@@ -269,13 +269,13 @@ async def poll_transcription_results(result_url, headers):
             logger.info(f"\nTranscript:\n{transcript}\n")
             
             # Save complete response to file
-            with open("recordings/transcript.json", "w") as f:
+            with open("transcriptions/transcript.json", "w") as f:
                 json.dump(poll_response, f, indent=2)
             break
             
         elif status == "error":
             logger.error("Transcription failed")
-            with open("recordings/error.json", "w") as f:
+            with open("transcriptions/error.json", "w") as f:
                 json.dump(poll_response, f, indent=2)
             break
             

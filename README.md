@@ -10,14 +10,12 @@ This project is a proof of concept with limited support and is not meant for pro
 
 ### Live Transcription Mode
 ```bash
-cp entrypoint-live.sh entrypoint.sh
-docker build -t gmeet-live -f Dockerfile .
+docker build -t gmeet-live -f Dockerfile.live .
 ```
 
 ### Pre-recorded Mode
 ```bash
-cp entrypoint-prerecorded.sh entrypoint.sh
-docker build -t gmeet-prerecorded -f Dockerfile .
+docker build -t gmeet-prerecorded -f Dockerfile.prerecorded .
 ```
 
 ## Usage
@@ -33,6 +31,7 @@ docker run -it \
     -e MAX_WAIT_TIME_IN_MINUTES=2 \ #max wait time in the lobby
     -v $PWD/recordings:/app/recordings \ # local storage for the recording
     -v $PWD/screenshots:/app/screenshots \ # local storage for intermediate bot screenshots
+    -v $PWD/transcriptions:/app/transcriptions \ # local storage for transcriptions
     gmeet-live
 ```
 
@@ -48,6 +47,7 @@ docker run -it \
     -e MAX_WAIT_TIME_IN_MINUTES=2 \ #max wait time in the lobby
     -v $PWD/recordings:/app/recordings \ # local storage for the recording
     -v $PWD/screenshots:/app/screenshots \ # local storage for intermediate bot screenshots
+    -v $PWD/transcriptions:/app/transcriptions \ # local storage for transcription
     gmeet-prerecorded
 ```
 

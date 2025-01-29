@@ -21,20 +21,43 @@ logger = logging.getLogger(__name__)
 
 # Audio Configuration for Gladia
 SAMPLE_RATE = 16000
+
 STREAMING_CONFIGURATION = {
+    # Audio input settings
     "encoding": "wav/pcm",
     "sample_rate": SAMPLE_RATE,
     "bit_depth": 16,
     "channels": 1,
+    
     "language_config": {
-        "languages": ["en", "fr", "es", "ar"],
-        "code_switching": True
+        "languages": ["en", "fr", "es", "ar"],  # Added more supported languages
+        "code_switching": True  # Enables automatic language switching detection
     },
+    
     "realtime_processing": {
+        "words_accurate_timestamps": True,  # Enable precise word timing
         "custom_vocabulary": True,
         "custom_vocabulary_config": {
-            "vocabulary": ["Gladia","Léo Idir"]  # Add any specific terms you want to recognize
-        }
+            "vocabulary": [
+                "Gladia",
+                "Léo Idir",
+                "ASR"
+            ]
+        },
+        "named_entity_recognition": True,  # Enable entity detection
+        "sentiment_analysis": True  # Enable emotion/tone detection
+    },
+    
+    "pre_processing": {
+        "audio_enhancer": True,  # Enable noise reduction
+        "speech_threshold": 0.46  # Default speech detection sensitivity
+    },
+    
+    "messages_config": {
+        "receive_partial_transcripts": True,
+        "receive_final_transcripts": True,
+        "receive_speech_events": True,
+        "receive_errors": True
     }
 }
 
@@ -98,9 +121,9 @@ async def setup_audio_drivers():
         await run_command_async(cmd)
 
 async def handle_media_controls(driver):
-    """Handle microphone and camera controls"""
+    #Handle microphone and camera controls
     try:
-        driver.find_element(By.XPATH, "//span[contains(text(), 'Continue without microphone')]").click()
+        #driver.find_element(By.XPATH, "//span[contains(text(), 'Continue without microphone')]").click()
         await asyncio.sleep(2)
         driver.find_element(By.XPATH, "//div[@aria-label='Turn off microphone']").click()
         logger.info("Microphone disabled")
@@ -114,7 +137,7 @@ async def handle_media_controls(driver):
         logger.info("No camera to disable")
 
 async def join_meeting(driver):
-    """Attempt to join the meeting"""
+    #Attempt to join the meeting
     max_time = datetime.datetime.now() + datetime.timedelta(
         minutes=int(os.getenv("MAX_WAITING_TIME_IN_MINUTES", 5))
     )
@@ -185,12 +208,12 @@ async def handle_transcription_messages(websocket):
                 logger.info(f"{start_time:.2f}s --> {end_time:.2f}s | {text}")
                 
                 # Save transcription to file
-                with open("recordings/live_transcript.txt", "a") as f:
+                with open("transcriptions/live_transcript.txt", "a") as f:
                     f.write(f"{start_time:.2f}s --> {end_time:.2f}s | {text}\n")
             
             elif content["type"] == "post_final_transcript":
                 logger.info("Transcription session ended")
-                with open("recordings/final_transcript.json", "w") as f:
+                with open("transcriptions/final_transcript.json", "w") as f:
                     json.dump(content, f, indent=2)
                 break
     except Exception as e:
@@ -201,8 +224,8 @@ async def join_meet():
     meet_link = os.getenv("GMEET_LINK", "https://meet.google.com/dau-pztc-yad")
     logger.info(f"Starting recorder for {meet_link}")
 
-    # Create recordings directory if it doesn't exist
-    os.makedirs("recordings", exist_ok=True)
+    # Create transcriptions directory if it doesn't exist
+    os.makedirs("transcriptions", exist_ok=True)
 
     # Setup audio drivers
     await setup_audio_drivers()
