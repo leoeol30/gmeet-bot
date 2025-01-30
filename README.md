@@ -1,36 +1,44 @@
-# 🎥 Gladia Transcription - GMeet Bot
+# 🤖 Google Meet Bot with Gladia Transcription
 
 <div align="center">
-
-*A technical implementation demonstrating Gladia's real-time and prerecorded transcription APIs with Google Meet*
-
-
+<em>An automated solution for capturing and transcribing Google Meet sessions using Gladia's powerful transcription APIs</em>
 </div>
 
-A demonstration showing how to use both Gladia's real-time and prerecorded transcription APIs with Google Meet. The project supports two modes:
-- Real-time transcription with live output during the meeting
-- Prerecorded transcription with speaker diarization after the meeting
+## 📝 Overview
 
-> ⚠️ **Note**: This is a technical demonstration and not intended for production use.
+This project demonstrates an automated bot that joins Google Meet sessions and leverages Gladia's transcription capabilities. It supports two distinct transcription approaches:
 
-## 🔑 Key Technical Aspects
-- Dual transcription modes (real-time and prerecorded)
-- Integration with Gladia's V2 APIs
-- Virtual audio capture for Google Meet sessions
+- **Real-time Transcription**: Live capture and transcription during the meeting
+- **Post-meeting Processing**: Full recording with speaker diarization after the meeting concludes
 
-## 🚀 Build Options
+> ⚠️ **Important**: This implementation serves as a technical demonstration and proof of concept. It is not recommended for production environments without additional development and security considerations.
+
+## 🌟 Features
+
+- Automated Google Meet session joining
+- Dual transcription modes with different use cases
+- Integration with Gladia's V2 Transcription APIs
+- Virtual audio capture system
+- Support for speaker diarization (in prerecorded mode)
+- Flexible recording duration control
+- Optional screenshot capture
+
+## 🛠️ Build Instructions
+
+Choose your build configuration based on your transcription needs:
 
 ```bash
-# Real-time Transcription Mode
+# For real-time transcription capabilities
 docker build -t gmeet-live -f Dockerfile.live .
 
-# Prerecorded Transcription Mode
+# For post-meeting transcription with speaker diarization
 docker build -t gmeet-prerecorded -f Dockerfile.prerecorded .
 ```
 
-## 💻 Implementation Examples
+## 🚀 Usage Examples
 
-### Real-time Transcription Mode
+### Real-time Mode
+
 ```bash
 docker run -it \
     -e GMEET_LINK="https://meet.google.com/my-gmeet-id" \
@@ -45,7 +53,8 @@ docker run -it \
     gmeet-live
 ```
 
-### Prerecorded Transcription Mode
+### Prerecorded Mode with Diarization
+
 ```bash
 docker run -it \
     -e GMEET_LINK="https://meet.google.com/my-gmeet-id" \
@@ -61,6 +70,17 @@ docker run -it \
     gmeet-prerecorded
 ```
 
----
+## 📁 Directory Structure
 
-Created to demonstrate both real-time and prerecorded transcription capabilities of [Gladia](https://gladia.io)'s APIs.
+The bot creates and manages several directories:
+- `/app/recordings`: Stores meeting audio recordings
+- `/app/screenshots`: Contains captured meeting screenshots
+- `/app/transcriptions`: Holds the generated transcription files
+
+## 🔍 Use Cases
+
+- **Real-time Mode**: Ideal for live captioning, immediate transcription needs, or when quick turnaround is essential
+- **Prerecorded Mode**: Better for accurate speaker identification, high-quality transcription, and detailed post-meeting analysis
+
+---
+Created by Léo Idir, based on [gladia-samples Google Meet Bot](https://github.com/gladiaio/gladia-samples/tree/main/integrations-examples/gmeet-bot)
