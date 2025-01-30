@@ -79,7 +79,7 @@ The bot creates and manages several directories:
 
 ## 🔍 Use Cases
 
-- **Real-time Mode**: Ideal for live captioning, immediate transcription needs, or when quick turnaround is essential
+- **Real-time Mode**: Ideal for live captioning, immediate transcription needs.
 - **Prerecorded Mode**: Better for accurate speaker identification, high-quality transcription, and detailed post-meeting analysis
 
 ---
