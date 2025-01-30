@@ -235,8 +235,9 @@ async def handle_transcription_messages(websocket):
                 with open("transcriptions/live_transcript.txt", "a") as f:
                     f.write(f"{start_time:.2f}s --> {end_time:.2f}s | {text}\n")
             
-            elif content["type"] == "final_transcript":
-                logger.info("Transcription session ended")
+            # Check for both possible final transcript message types
+            elif content["type"] in ["final_transcript", "post_processing_result"]:
+                logger.info(f"Received final transcript of type: {content['type']}")
                 
                 # Save complete transcript JSON
                 with open("transcriptions/final_transcript.json", "w") as f:
@@ -244,22 +245,23 @@ async def handle_transcription_messages(websocket):
                 
                 # Save full transcript text
                 if "transcription" in content and "full_transcript" in content["transcription"]:
+                    logger.info("Saving full transcript")
                     with open("transcriptions/full_transcript.txt", "w") as f:
                         f.write(content["transcription"]["full_transcript"])
                 
                 # Save summary if available
                 if "summarization" in content and content["summarization"].get("results"):
-                    logger.info("Saving summary to file")
+                    logger.info("Saving summary")
                     with open("transcriptions/summary.txt", "w") as f:
                         f.write(content["summarization"]["results"])
                 
                 # Save chapters if available
                 if "chapters" in content and content["chapters"].get("results"):
-                    logger.info("Saving chapters to file")
+                    logger.info("Saving chapters")
                     with open("transcriptions/chapters.json", "w") as f:
                         json.dump(content["chapters"]["results"], f, indent=2)
                 
-                break
+                return  
     except Exception as e:
         logger.error(f"Error processing transcription: {str(e)}")
 
@@ -352,7 +354,7 @@ async def join_meet():
             # Wait for final transcript (add timeout to prevent infinite wait)
             try:
                 logger.info("Waiting for final transcript...")
-                await asyncio.wait_for(transcription_task, timeout=30)  # 30 second timeout
+                await asyncio.wait_for(transcription_task, timeout=120)  # 120 second timeout
             except asyncio.TimeoutError:
                 logger.warning("Timeout waiting for final transcript")
             finally:
