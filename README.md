@@ -7,7 +7,6 @@
 ## 📝 Overview
 
 This project demonstrates an automated bot that joins Google Meet sessions and leverages Gladia's transcription capabilities. It supports two distinct transcription approaches:
-
 - **Real-time Transcription**: Live capture and transcription during the meeting
 - **Post-meeting Processing**: Full recording with speaker diarization after the meeting concludes
 
@@ -37,32 +36,37 @@ docker build -t gmeet-prerecorded -f Dockerfile.prerecorded .
 
 ## 🚀 Usage Examples
 
-### Live Transcription
-```bash
-docker run -it \
-    -e GMEET_LINK=https://meet.google.com/my-gmeet-id \
-    -e GMAIL_USER_EMAIL=myuser1234@gmail.com \
-    -e GMAIL_USER_PASSWORD=my_gmail_password \
-    -e DURATION_IN_MINUTES=1 \ #duration of the meeting to record
-    -e GLADIA_API_KEY=YOUR_GLADIA_API_KEY \
-    -e MAX_WAIT_TIME_IN_MINUTES=2 \ #max wait time in the lobby
-    -v $PWD/recordings:/app/recordings \ # local storage for the recording
-    -v $PWD/screenshots:/app/screenshots \ # local storage for intermediate bot screenshots
-    gmeet-live
-```
+### Real-time Transcription
 
-### Pre-recorded Mode with Diarization
 ```bash
 docker run -it \
-    -e GMEET_LINK=https://meet.google.com/my-gmeet-id \
-    -e GMAIL_USER_EMAIL=myuser1234@gmail.com \
-    -e GMAIL_USER_PASSWORD=my_gmail_password \
+    -e GMEET_LINK="https://meet.google.com/xaw-ntpm-sej" \
+    -e GMAIL_USER_EMAIL="gladiademo@gmail.com" \
+    -e GMAIL_USER_PASSWORD="DemoPassword" \
     -e DURATION_IN_MINUTES=1 \ #duration of the meeting to record
-    -e GLADIA_API_KEY=YOUR_GLADIA_API_KEY \
+    -e GLADIA_API_KEY="7c541874-d743-4647-99da-8feba6bcdb07" \
     -e GLADIA_DIARIZATION=true \
     -e MAX_WAIT_TIME_IN_MINUTES=2 \ #max wait time in the lobby
     -v $PWD/recordings:/app/recordings \ # local storage for the recording
     -v $PWD/screenshots:/app/screenshots \ # local storage for intermediate bot screenshots
+    -v $PWD/transcriptions:/app/transcriptions \ # local storage for transcription output
+    gmeet-live
+```
+
+### Prerecorded Mode with Diarization
+
+```bash
+docker run -it \
+    -e GMEET_LINK="https://meet.google.com/my-gmeet-id" \
+    -e GMAIL_USER_EMAIL="myuser1234@gmail.com" \
+    -e GMAIL_USER_PASSWORD="my_gmail_password" \
+    -e DURATION_IN_MINUTES=1 \ #duration of the meeting to record
+    -e GLADIA_API_KEY="YOUR_GLADIA_API_KEY" \
+    -e GLADIA_DIARIZATION=true \
+    -e MAX_WAIT_TIME_IN_MINUTES=2 \ #max wait time in the lobby
+    -v $PWD/recordings:/app/recordings \ # local storage for the recording
+    -v $PWD/screenshots:/app/screenshots \ # local storage for intermediate bot screenshots
+    -v $PWD/transcriptions:/app/transcriptions \ # local storage for transcription output
     gmeet-prerecorded
 ```
 
@@ -75,7 +79,7 @@ The bot creates and manages several directories:
 
 ## 🔍 Use Cases
 
-- **Real-time Mode**: Ideal for live captioning, immediate transcription needs.
+- **Real-time Mode**: Ideal for live captioning, immediate transcription needs
 - **Prerecorded Mode**: Better for accurate speaker identification, high-quality transcription, and detailed post-meeting analysis
 
 ---
