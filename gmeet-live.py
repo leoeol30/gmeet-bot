@@ -33,8 +33,14 @@ STREAMING_CONFIGURATION = {
    "maximum_duration_without_endpointing": 30,  # Splits things up if someone talks for 30s straight
    
    "language_config": {
-       "languages": ["en", "fr", "es", "ar"],  # Can handle English, French, Spanish, and Arabic
+       "languages": ["en", "fr", "es", "ar"],  # English, French, Spanish, and Arabic
        "code_switching": True    # Can handle people switching languages mid-conversation
+   },
+   
+    # === Audio Cleanup ===
+   "pre_processing": {
+       "audio_enhancer": True,           # Cleans up the audio, gets rid of background noise
+       "speech_threshold": 0.46          # Sensitivity of voice detection for background noise (default value 0.46, that you can change)
    },
    
    # === Smart Features ===
@@ -42,22 +48,22 @@ STREAMING_CONFIGURATION = {
        "words_accurate_timestamps": True,  # Knows exactly when each word was said
        "custom_vocabulary": True,          # Helps catch special words
        "custom_vocabulary_config": {
-           "vocabulary": [                 # Words to listen extra carefully for
-               "Gladia",                   # Company name
-               "Léo Idir",                # Person's name
-               "ASR"                      # Tech term
+           "vocabulary": [                 
+               "Gladia",                   
+               "Léo Idir",                
+               "ASR"                      
            ]
        },
        "named_entity_recognition": True,  # Spots names, places, organizations
        "sentiment_analysis": True        # Figures out if someone sounds happy/angry/etc
    },
    
-   # === Audio Cleanup ===
-   "pre_processing": {
-       "audio_enhancer": True,           # Cleans up the audio, gets rid of background noise
-       "speech_threshold": 0.46          # Sweet spot between catching all speech and ignoring background noise
-   },
-   
+    # === Summary ===
+    "post_processing": {
+        "summarization": True,
+        "summarization_config": {"type": "bullet_points"}, # Available options: general, bullet_points, concise
+        "chapterization": False
+    },
    # === Updates We Want ===
    # What info we want to get back while it's running
    "messages_config": {
@@ -74,7 +80,7 @@ STREAMING_CONFIGURATION = {
 }
 
 def init_live_session(api_key: str):
-    #Initialize a live transcription session with Gladia
+    # Initialize a live transcription session with Gladia
     response = requests.post(
         "https://api.gladia.io/v2/live",
         headers={"X-Gladia-Key": api_key},
@@ -87,14 +93,14 @@ def init_live_session(api_key: str):
     return response.json()
 
 async def run_command_async(command):
-    #Run a shell command asynchronously
+    # Run a shell command asynchronously
     process = await asyncio.create_subprocess_shell(
         command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
     return await process.communicate()
 
 async def google_sign_in(email, password, driver):
-    #Handle Google account sign-in process
+    # Handle Google account sign-in process
     try:
         logger.info("Starting Google sign-in process")
         driver.get("https://accounts.google.com")
@@ -117,7 +123,7 @@ async def google_sign_in(email, password, driver):
         raise
 
 async def setup_audio_drivers():
-    #Configure virtual audio drivers for recording
+    # Configure virtual audio drivers for recording
     logger.info("Setting up virtual audio drivers")
     commands = [
         "sudo rm -rf /var/run/pulse /var/lib/pulse /root/.config/pulse",
@@ -133,7 +139,7 @@ async def setup_audio_drivers():
         await run_command_async(cmd)
 
 async def handle_media_controls(driver):
-    #Handle microphone and camera controls
+    # Handle microphone and camera controls
     try:
         #driver.find_element(By.XPATH, "//span[contains(text(), 'Continue without microphone')]").click()
         await asyncio.sleep(2)
@@ -149,7 +155,7 @@ async def handle_media_controls(driver):
         logger.info("No camera to disable")
 
 async def join_meeting(driver):
-    #Attempt to join the meeting
+    # Attempt to join the meeting
     max_time = datetime.datetime.now() + datetime.timedelta(
         minutes=int(os.getenv("MAX_WAITING_TIME_IN_MINUTES", 5))
     )
@@ -169,7 +175,7 @@ async def join_meeting(driver):
     return False
 
 async def capture_and_stream_audio(websocket):
-    #Capture audio using ffmpeg and stream to Gladia
+    # Capture audio using ffmpeg and stream to Gladia
     logger.info("Starting audio capture")
     
     # FFmpeg command to capture audio and output raw PCM
@@ -208,7 +214,7 @@ async def capture_and_stream_audio(websocket):
             pass
 
 async def handle_transcription_messages(websocket):
-    #Process transcription messages from Gladia
+    # Process transcription messages from Gladia
     try:
         async for message in websocket:
             content = json.loads(message)
@@ -232,7 +238,7 @@ async def handle_transcription_messages(websocket):
         logger.error(f"Error processing transcription: {str(e)}")
 
 async def join_meet():
-    #Main function to handle the Google Meet recording process
+    # Main function to handle the Google Meet recording process
     meet_link = os.getenv("GMEET_LINK", "https://meet.google.com/dau-pztc-yad")
     logger.info(f"Starting recorder for {meet_link}")
 
