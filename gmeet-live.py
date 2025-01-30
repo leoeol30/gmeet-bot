@@ -62,7 +62,7 @@ STREAMING_CONFIGURATION = {
     "post_processing": {
         "summarization": True,
         "summarization_config": {"type": "bullet_points"}, # Available options: general, bullet_points, concise
-        "chapterization": False
+        "chapterization": True
     },
    # === Updates We Want ===
    # What info we want to get back while it's running
