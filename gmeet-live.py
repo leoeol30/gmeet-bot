@@ -11,7 +11,7 @@ from websockets.exceptions import ConnectionClosedOK
 import undetected_chromedriver as uc
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException, TimeoutException
 import requests
 import base64
 
@@ -40,7 +40,7 @@ STREAMING_CONFIGURATION = {
     # === Audio Cleanup ===
    "pre_processing": {
        "audio_enhancer": True,           # Cleans up the audio, gets rid of background noise
-       "speech_threshold": 0.46          # Sensitivity of voice detection for background noise (default value 0.46, that you can change)
+       "speech_threshold": 0.95          # Sensitivity of voice detection for background noise (default value 0.46, that you can change)
    },
    
    # === Smart Features ===
@@ -81,6 +81,7 @@ STREAMING_CONFIGURATION = {
 
 def init_live_session(api_key: str):
     # Initialize a live transcription session with Gladia
+    logger.info(f"Our streaming configuration is: {STREAMING_CONFIGURATION}")
     response = requests.post(
         "https://api.gladia.io/v2/live",
         headers={"X-Gladia-Key": api_key},
@@ -149,6 +150,7 @@ async def handle_media_controls(driver):
         logger.info("No microphone to disable")
 
     try:
+        await asyncio.sleep(2)
         driver.find_element(By.XPATH, "//div[@aria-label='Turn off camera']")
         logger.info("Camera disabled")
     except NoSuchElementException:
@@ -162,15 +164,19 @@ async def join_meeting(driver):
     
     while datetime.datetime.now() < max_time:
         try:
+            await asyncio.sleep(2)
             join_button = driver.find_element(By.XPATH, "//span[contains(text(), 'Ask to join')]")
             join_button.click()
             await asyncio.sleep(2)
             logger.info("Meeting joined")
             return True
-        except NoSuchElementException:
+        except (NoSuchElementException, TimeoutException) as e:
             await asyncio.sleep(5)
             logger.info("Waiting to join meeting...")
-    
+        except ElementClickInterceptedException as e:
+            logger.warning(f"Click intercepted: {str(e)}")
+            await asyncio.sleep(2)
+            continue
     logger.error("Failed to join meeting within the timeout period")
     return False
 
@@ -229,10 +235,30 @@ async def handle_transcription_messages(websocket):
                 with open("transcriptions/live_transcript.txt", "a") as f:
                     f.write(f"{start_time:.2f}s --> {end_time:.2f}s | {text}\n")
             
-            elif content["type"] == "post_final_transcript":
+            elif content["type"] == "final_transcript":
                 logger.info("Transcription session ended")
+                
+                # Save complete transcript JSON
                 with open("transcriptions/final_transcript.json", "w") as f:
                     json.dump(content, f, indent=2)
+                
+                # Save full transcript text
+                if "transcription" in content and "full_transcript" in content["transcription"]:
+                    with open("transcriptions/full_transcript.txt", "w") as f:
+                        f.write(content["transcription"]["full_transcript"])
+                
+                # Save summary if available
+                if "summarization" in content and content["summarization"].get("results"):
+                    logger.info("Saving summary to file")
+                    with open("transcriptions/summary.txt", "w") as f:
+                        f.write(content["summarization"]["results"])
+                
+                # Save chapters if available
+                if "chapters" in content and content["chapters"].get("results"):
+                    logger.info("Saving chapters to file")
+                    with open("transcriptions/chapters.json", "w") as f:
+                        json.dump(content["chapters"]["results"], f, indent=2)
+                
                 break
     except Exception as e:
         logger.error(f"Error processing transcription: {str(e)}")
@@ -316,13 +342,21 @@ async def join_meet():
             duration = int(os.getenv("DURATION_IN_MINUTES", 15)) * 60
             await asyncio.sleep(duration)
             
-            # Stop tasks
+            # Stop audio capture first
+            logger.info("Stopping audio capture...")
             audio_task.cancel()
-            transcription_task.cancel()
             
             # Send stop signal to Gladia
             await websocket.send(json.dumps({"type": "stop_recording"}))
-
+            
+            # Wait for final transcript (add timeout to prevent infinite wait)
+            try:
+                logger.info("Waiting for final transcript...")
+                await asyncio.wait_for(transcription_task, timeout=30)  # 30 second timeout
+            except asyncio.TimeoutError:
+                logger.warning("Timeout waiting for final transcript")
+            finally:
+                transcription_task.cancel()
     except Exception as e:
         logger.error(f"Error during meeting: {str(e)}")
     finally:

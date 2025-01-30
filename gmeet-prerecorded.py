@@ -30,14 +30,14 @@ def make_request(url, headers, method="GET", data=None, files=None):
         raise
 
 async def run_command_async(command):
-    """ Run a shell command asynchronously """
+    # Run a shell command asynchronously
     process = await asyncio.create_subprocess_shell(
         command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
     return await process.communicate()
 
 async def google_sign_in(email, password, driver):
-    """ Handle Google account sign-in process """
+    # Handle Google account sign-in process 
     try:
         logger.info("Starting Google sign-in process")
         driver.get("https://accounts.google.com")
@@ -66,7 +66,7 @@ async def google_sign_in(email, password, driver):
         raise
 
 async def setup_audio_drivers():
-    """Configure virtual audio drivers for recording"""
+    #Configure virtual audio drivers for recording
     logger.info("Setting up virtual audio drivers")
     commands = [
         "sudo rm -rf /var/run/pulse /var/lib/pulse /root/.config/pulse",
@@ -82,7 +82,7 @@ async def setup_audio_drivers():
         await run_command_async(cmd)
 
 async def join_meet():
-    """Main function to handle the Google Meet recording process"""
+    #Main function to handle the Google Meet recording process
     meet_link = os.getenv("GMEET_LINK", "https://meet.google.com/dau-pztc-yad")
     logger.info(f"Starting recorder for {meet_link}")
 
@@ -165,7 +165,7 @@ async def join_meet():
         driver.quit()
 
 async def handle_media_controls(driver):
-    """Handle microphone and camera controls"""
+    #Handle microphone and camera controls
     try:
         # Disable microphone
         #driver.find_element(By.XPATH, "//span[contains(text(), 'Continue without microphone')]").click()
@@ -185,7 +185,7 @@ async def handle_media_controls(driver):
         logger.info("No camera to disable")
 
 async def join_meeting(driver):
-    """Attempt to join the meeting"""
+    #Attempt to join the meeting
     max_time = datetime.datetime.now() + datetime.timedelta(
         minutes=int(os.getenv("MAX_WAITING_TIME_IN_MINUTES", 5))
     )
@@ -206,7 +206,7 @@ async def join_meeting(driver):
     return False
 
 async def record_meeting(duration):
-    """Record the meeting using ffmpeg"""
+    #Record the meeting using ffmpeg
     logger.info("Starting recording")
     record_command = (
         f"ffmpeg -y -video_size 1920x1080 -framerate 30 -f x11grab -i :99 "
@@ -217,7 +217,7 @@ async def record_meeting(duration):
     logger.info("Recording completed")
 
 async def handle_transcription(gladia_api_key):
-    """Handle the transcription process using Gladia API"""
+    #Handle the transcription process using Gladia API
     file_path = "recordings/output.mp4"
     if not os.path.exists(file_path):
         logger.error("Recording file not found")
