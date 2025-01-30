@@ -140,43 +140,60 @@ async def setup_audio_drivers():
         await run_command_async(cmd)
 
 async def handle_media_controls(driver):
-    # Handle microphone and camera controls
+    #Simple function to turn off both microphone and camera.
     try:
-        #driver.find_element(By.XPATH, "//span[contains(text(), 'Continue without microphone')]").click()
-        await asyncio.sleep(2)
-        driver.find_element(By.XPATH, "//div[@aria-label='Turn off microphone']").click()
-        logger.info("Microphone disabled")
-    except NoSuchElementException:
-        logger.info("No microphone to disable")
+        initial_buttons = [
+            "//span[contains(text(), 'Continue without microphone')]",
+            "//span[contains(text(), 'Continue without camera')]"
+        ]
+        
+        for button in initial_buttons:
+            try:
+                driver.find_element(By.XPATH, button).click()
+                await asyncio.sleep(1)
+            except:
+                continue
+    except Exception as e:
+        logger.info(f"No initial popups found: {e}")
 
+    # Then handle microphone
     try:
-        await asyncio.sleep(2)
-        driver.find_element(By.XPATH, "//div[@aria-label='Turn off camera']")
-        logger.info("Camera disabled")
-    except NoSuchElementException:
-        logger.info("No camera to disable")
+        microphone_off = driver.find_element(By.XPATH, "//div[@aria-label='Turn off microphone']")
+        microphone_off.click()
+        driver.save_screenshot("screenshots/disable_microphone.png")
+        logger.info("Microphone turned off")
+    except:
+        logger.info("Microphone already off or not found")
 
+    await asyncio.sleep(1)  # Short pause between actions
+
+    # Then handle camera
+    try:
+        camera_off = driver.find_element(By.XPATH, "//div[@aria-label='Turn off camera']")
+        camera_off.click()
+        driver.save_screenshot("screenshots/disable_camera.png")
+        logger.info("Camera turned off")
+    except:
+        logger.info("Camera already off or not found")
+        
 async def join_meeting(driver):
-    # Attempt to join the meeting
+    #Attempt to join the meeting
     max_time = datetime.datetime.now() + datetime.timedelta(
         minutes=int(os.getenv("MAX_WAITING_TIME_IN_MINUTES", 5))
     )
     
     while datetime.datetime.now() < max_time:
         try:
-            await asyncio.sleep(2)
             join_button = driver.find_element(By.XPATH, "//span[contains(text(), 'Ask to join')]")
             join_button.click()
             await asyncio.sleep(2)
+            driver.save_screenshot("screenshots/joining.png")
             logger.info("Meeting joined")
             return True
-        except (NoSuchElementException, TimeoutException) as e:
+        except NoSuchElementException:
             await asyncio.sleep(5)
             logger.info("Waiting to join meeting...")
-        except ElementClickInterceptedException as e:
-            logger.warning(f"Click intercepted: {str(e)}")
-            await asyncio.sleep(2)
-            continue
+    
     logger.error("Failed to join meeting within the timeout period")
     return False
 
@@ -272,7 +289,14 @@ async def join_meet():
 
     # Create transcriptions directory if it doesn't exist
     os.makedirs("transcriptions", exist_ok=True)
-
+    
+    # Clean up screenshots directory
+    if os.path.exists("screenshots"):
+        for f in os.listdir("screenshots"):
+            os.remove(f"screenshots/{f}")
+    else:
+        os.mkdir("screenshots")
+        
     # Setup audio drivers
     await setup_audio_drivers()
 

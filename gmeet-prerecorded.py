@@ -165,24 +165,41 @@ async def join_meet():
         driver.quit()
 
 async def handle_media_controls(driver):
-    #Handle microphone and camera controls
+    #Simple function to turn off both microphone and camera.
     try:
-        # Disable microphone
-        #driver.find_element(By.XPATH, "//span[contains(text(), 'Continue without microphone')]").click()
-        #await asyncio.sleep(2)
-        driver.find_element(By.XPATH, "//div[@aria-label='Turn off microphone']").click()
-        driver.save_screenshot("screenshots/disable_microphone.png")
-        logger.info("Microphone disabled")
-    except NoSuchElementException:
-        logger.info("No microphone to disable")
+        initial_buttons = [
+            "//span[contains(text(), 'Continue without microphone')]",
+            "//span[contains(text(), 'Continue without camera')]"
+        ]
+        
+        for button in initial_buttons:
+            try:
+                driver.find_element(By.XPATH, button).click()
+                await asyncio.sleep(1)
+            except:
+                continue
+    except Exception as e:
+        logger.info(f"No initial popups found: {e}")
 
+    # Then handle microphone
     try:
-        # Disable camera
-        driver.find_element(By.XPATH, "//div[@aria-label='Turn off camera']")
+        microphone_off = driver.find_element(By.XPATH, "//div[@aria-label='Turn off microphone']")
+        microphone_off.click()
+        driver.save_screenshot("screenshots/disable_microphone.png")
+        logger.info("Microphone turned off")
+    except:
+        logger.info("Microphone already off or not found")
+
+    await asyncio.sleep(1)  # Short pause between actions
+
+    # Then handle camera
+    try:
+        camera_off = driver.find_element(By.XPATH, "//div[@aria-label='Turn off camera']")
+        camera_off.click()
         driver.save_screenshot("screenshots/disable_camera.png")
-        logger.info("Camera disabled")
-    except NoSuchElementException:
-        logger.info("No camera to disable")
+        logger.info("Camera turned off")
+    except:
+        logger.info("Camera already off or not found")
 
 async def join_meeting(driver):
     #Attempt to join the meeting
