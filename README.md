@@ -16,8 +16,7 @@ A demonstration showing how to use both Gladia's real-time and prerecorded trans
 ## 🔑 Key Technical Aspects
 - Dual transcription modes (real-time and prerecorded)
 - Integration with Gladia's V2 APIs
-- Virtual audio capture for Google Meet
-- Automated session management
+- Virtual audio capture for Google Meet sessions
 
 ## 🚀 Build Options
 
@@ -61,14 +60,6 @@ docker run -it \
     -v $PWD/transcriptions:/app/transcriptions \
     gmeet-prerecorded
 ```
-
-## 🌟 Features
-- Dual transcription modes (real-time and prerecorded)
-- Speaker diarization in prerecorded mode
-- Multi-language support (English, French, Spanish, Arabic)
-- Virtual audio recording using PulseAudio
-- Screen capture using Xscreen
-- Automated meeting attendance
 
 ---
 
