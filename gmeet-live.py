@@ -23,46 +23,58 @@ logger = logging.getLogger(__name__)
 SAMPLE_RATE = 16000
 
 STREAMING_CONFIGURATION = {
-    # Audio input settings
-    "encoding": "wav/pcm",
-    "sample_rate": SAMPLE_RATE,
-    "bit_depth": 16,
-    "channels": 1,
-    
-    "language_config": {
-        "languages": ["en", "fr", "es", "ar"],  # Added more supported languages
-        "code_switching": True  # Enables automatic language switching detection
-    },
-    
-    "realtime_processing": {
-        "words_accurate_timestamps": True,  # Enable precise word timing
-        "custom_vocabulary": True,
-        "custom_vocabulary_config": {
-            "vocabulary": [
-                "Gladia",
-                "Léo Idir",
-                "ASR"
-            ]
-        },
-        "named_entity_recognition": True,  # Enable entity detection
-        "sentiment_analysis": True  # Enable emotion/tone detection
-    },
-    
-    "pre_processing": {
-        "audio_enhancer": True,  # Enable noise reduction
-        "speech_threshold": 0.46  # Default speech detection sensitivity
-    },
-    
-    "messages_config": {
-        "receive_partial_transcripts": True,
-        "receive_final_transcripts": True,
-        "receive_speech_events": True,
-        "receive_errors": True
-    }
+   # === Audio Basics ===
+   "encoding": "wav/pcm",     # Raw audio in WAV format
+   "sample_rate": SAMPLE_RATE,  # How many audio snapshots per second
+   "bit_depth": 16,          # Audio quality - 16 is standard for speech
+   "channels": 1,            # One audio channel (mono) to keep it simple
+   
+   "endpointing": 0.3,       # Waits for 0.3s of silence before saying "that's the end of that sentence"
+   "maximum_duration_without_endpointing": 30,  # Splits things up if someone talks for 30s straight
+   
+   "language_config": {
+       "languages": ["en", "fr", "es", "ar"],  # Can handle English, French, Spanish, and Arabic
+       "code_switching": True    # Can handle people switching languages mid-conversation
+   },
+   
+   # === Smart Features ===
+   "realtime_processing": {
+       "words_accurate_timestamps": True,  # Knows exactly when each word was said
+       "custom_vocabulary": True,          # Helps catch special words
+       "custom_vocabulary_config": {
+           "vocabulary": [                 # Words to listen extra carefully for
+               "Gladia",                   # Company name
+               "Léo Idir",                # Person's name
+               "ASR"                      # Tech term
+           ]
+       },
+       "named_entity_recognition": True,  # Spots names, places, organizations
+       "sentiment_analysis": True        # Figures out if someone sounds happy/angry/etc
+   },
+   
+   # === Audio Cleanup ===
+   "pre_processing": {
+       "audio_enhancer": True,           # Cleans up the audio, gets rid of background noise
+       "speech_threshold": 0.46          # Sweet spot between catching all speech and ignoring background noise
+   },
+   
+   # === Updates We Want ===
+   # What info we want to get back while it's running
+   "messages_config": {
+       "receive_partial_transcripts": True,      # Get text as soon as someone speaks
+       "receive_final_transcripts": True,        # Get the final, double-checked version
+       "receive_speech_events": True,            # Know when someone starts/stops talking
+       "receive_pre_processing_events": True,    # Know when it's cleaning up the audio
+       "receive_realtime_processing_events": True,  # Updates about detecting names/sentiment
+       "receive_post_processing_events": True,   # Know when it's doing final touchups
+       "receive_acknowledgments": True,          # Confirm it got our audio okay
+       "receive_lifecycle_events": True,         # General status updates
+       "receive_errors": True                    # Let us know if something goes wrong
+   }
 }
 
 def init_live_session(api_key: str):
-    """Initialize a live transcription session with Gladia"""
+    #Initialize a live transcription session with Gladia
     response = requests.post(
         "https://api.gladia.io/v2/live",
         headers={"X-Gladia-Key": api_key},
@@ -75,14 +87,14 @@ def init_live_session(api_key: str):
     return response.json()
 
 async def run_command_async(command):
-    """Run a shell command asynchronously"""
+    #Run a shell command asynchronously
     process = await asyncio.create_subprocess_shell(
         command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
     return await process.communicate()
 
 async def google_sign_in(email, password, driver):
-    """Handle Google account sign-in process"""
+    #Handle Google account sign-in process
     try:
         logger.info("Starting Google sign-in process")
         driver.get("https://accounts.google.com")
@@ -105,7 +117,7 @@ async def google_sign_in(email, password, driver):
         raise
 
 async def setup_audio_drivers():
-    """Configure virtual audio drivers for recording"""
+    #Configure virtual audio drivers for recording
     logger.info("Setting up virtual audio drivers")
     commands = [
         "sudo rm -rf /var/run/pulse /var/lib/pulse /root/.config/pulse",
@@ -157,7 +169,7 @@ async def join_meeting(driver):
     return False
 
 async def capture_and_stream_audio(websocket):
-    """Capture audio using ffmpeg and stream to Gladia"""
+    #Capture audio using ffmpeg and stream to Gladia
     logger.info("Starting audio capture")
     
     # FFmpeg command to capture audio and output raw PCM
@@ -196,7 +208,7 @@ async def capture_and_stream_audio(websocket):
             pass
 
 async def handle_transcription_messages(websocket):
-    """Process transcription messages from Gladia"""
+    #Process transcription messages from Gladia
     try:
         async for message in websocket:
             content = json.loads(message)
@@ -220,7 +232,7 @@ async def handle_transcription_messages(websocket):
         logger.error(f"Error processing transcription: {str(e)}")
 
 async def join_meet():
-    """Main function to handle the Google Meet recording process"""
+    #Main function to handle the Google Meet recording process
     meet_link = os.getenv("GMEET_LINK", "https://meet.google.com/dau-pztc-yad")
     logger.info(f"Starting recorder for {meet_link}")
 
