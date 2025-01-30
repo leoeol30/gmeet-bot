@@ -37,36 +37,32 @@ docker build -t gmeet-prerecorded -f Dockerfile.prerecorded .
 
 ## 🚀 Usage Examples
 
-### Real-time Mode
-
+### Live Transcription
 ```bash
 docker run -it \
-    -e GMEET_LINK="https://meet.google.com/my-gmeet-id" \
-    -e GMAIL_USER_EMAIL="myuser1234@gmail.com" \
-    -e GMAIL_USER_PASSWORD="my_gmail_password" \
-    -e DURATION_IN_MINUTES=1 \
-    -e GLADIA_API_KEY="YOUR_GLADIA_API_KEY" \
-    -e MAX_WAIT_TIME_IN_MINUTES=2 \
-    -v $PWD/recordings:/app/recordings \
-    -v $PWD/screenshots:/app/screenshots \
-    -v $PWD/transcriptions:/app/transcriptions \
+    -e GMEET_LINK=https://meet.google.com/my-gmeet-id \
+    -e GMAIL_USER_EMAIL=myuser1234@gmail.com \
+    -e GMAIL_USER_PASSWORD=my_gmail_password \
+    -e DURATION_IN_MINUTES=1 \ #duration of the meeting to record
+    -e GLADIA_API_KEY=YOUR_GLADIA_API_KEY \
+    -e MAX_WAIT_TIME_IN_MINUTES=2 \ #max wait time in the lobby
+    -v $PWD/recordings:/app/recordings \ # local storage for the recording
+    -v $PWD/screenshots:/app/screenshots \ # local storage for intermediate bot screenshots
     gmeet-live
 ```
 
-### Prerecorded Mode with Diarization
-
+### Pre-recorded Mode with Diarization
 ```bash
 docker run -it \
-    -e GMEET_LINK="https://meet.google.com/my-gmeet-id" \
-    -e GMAIL_USER_EMAIL="myuser1234@gmail.com" \
-    -e GMAIL_USER_PASSWORD="my_gmail_password" \
-    -e DURATION_IN_MINUTES=1 \
-    -e GLADIA_API_KEY="YOUR_GLADIA_API_KEY" \
+    -e GMEET_LINK=https://meet.google.com/my-gmeet-id \
+    -e GMAIL_USER_EMAIL=myuser1234@gmail.com \
+    -e GMAIL_USER_PASSWORD=my_gmail_password \
+    -e DURATION_IN_MINUTES=1 \ #duration of the meeting to record
+    -e GLADIA_API_KEY=YOUR_GLADIA_API_KEY \
     -e GLADIA_DIARIZATION=true \
-    -e MAX_WAIT_TIME_IN_MINUTES=2 \
-    -v $PWD/recordings:/app/recordings \
-    -v $PWD/screenshots:/app/screenshots \
-    -v $PWD/transcriptions:/app/transcriptions \
+    -e MAX_WAIT_TIME_IN_MINUTES=2 \ #max wait time in the lobby
+    -v $PWD/recordings:/app/recordings \ # local storage for the recording
+    -v $PWD/screenshots:/app/screenshots \ # local storage for intermediate bot screenshots
     gmeet-prerecorded
 ```
 
